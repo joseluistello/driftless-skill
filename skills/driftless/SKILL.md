@@ -26,6 +26,33 @@ It is a **vault**, not a filing ceremony. Most of what you write stays a Note �
 1. **Read before you work.** Before touching a module, pull what the team already knows for that area. Drifted topics carry a freshness badge so you know what changed while you were gone.
 2. **Write one clean note after you learn.** When you hit a durable gotcha, decision, or invariant, leave exactly one clean note. Don't chase approval — leave something good.
 
+## Default behavior for Driftless work
+
+When the user invokes Driftless, asks about workspace context, or asks you to operate any Driftless plane, do not guess. Use the routing table first. If the request involves a surface you do not clearly know how to operate — Topics/Knowledge, Notes, Projects, Collections/Records, Entities, Broker/integrations, workspaces, areas, tags, hooks, sync, or pre-commit refresh — read this skill completely before acting, then follow referenced files only as needed.
+
+Do not ask the user to "load the Driftless skill." In repos with `.driftless/`, `@.driftless/skill.md` is the local operational manual and AGENTS.md points to it. Load it yourself when the task is Driftless-specific or when the command surface is uncertain.
+
+## Deciding your first move (the routing table)
+
+Pick the FIRST call by what you have in hand. This is the spine — detailed flows live in the references.
+
+| Situation | First move |
+|---|---|
+| You know the **files** you'll edit | `context get --files "a.ts,b.ts"` (drift shows inline) → details: `references/retrieve.md` |
+| You have a **task** but no slug yet | `driftless_context_retrieve { task, files }` (MCP) / `POST /topics/retrieve` — ranked, drifted-first, BRIEF bodies. **Start here when context is unknown.** |
+| You know the **topic slug** | `context get <slug>` (full body) |
+| Searching by **concept** | `context search <kw>` → `context get <slug>` |
+| Working a **project board** | `project card next <pid>` → load `context_bundle` → work → validate → mark done |
+| Acting on a **collection record** | `driftless_collection action:'retrieve' id:<cid>` (records + the criterion to read FIRST) → details: `references/retrieve.md` |
+| Operating a **connected integration** | `broker operations <provider>` → `broker invoke <provider> <op>`. **Operation not listed? STOP + report — never script it.** → details: `references/broker.md` |
+| You **learned something durable** | `context add/update <slug> --area <domain> ...` (the six rules) |
+| About to **commit / push** | `context get --diff` (add `--mark` to flag matched topics drifted) |
+| Context looks **untrustworthy** | `context doctor` |
+
+**Retrieve-first.** When you don't yet know which topic governs the area, `driftless_context_retrieve` is the one call that composes search + match-files + list and ranks them — don't hand-chain `search → list → get`. It returns BRIEF bodies (the durable *why*, not full `content`); follow up with `context get <slug>` for the one full body you actually need (the view tiers are `summary` / `brief` / `full` — full is always an opt-in).
+
+**Integration scripting is off-limits.** A normal agent NEVER authors or deploys an integration script (a Nango action). It only OPERATES connections that already exist (the broker). Connecting a provider is human-led SETUP. If a broker operation you need doesn't exist, report the missing capability — see Broker & integrations below.
+
 ## CRITICAL: the six rules every write follows
 
 These are not advice — they are the gate. Hold them on every `add` / `update` (the CLI and MCP nudge you, but the discipline is yours).
@@ -42,13 +69,16 @@ The litmus for whether something deserves a note at all: **would a future code c
 ## Reading — before you work
 
 ```bash
-driftless context get <slug>                  # if you know it
+# Have a task but no slug? Retrieve is the one ranked call (composes search + match-files + list).
+#   MCP:  driftless_context_retrieve { task: "add idempotency to the Stripe webhook", files: ["src/billing/webhooks/*"] }
+#   API:  POST /topics/retrieve   (brief bodies by default; pass view:"full" for whole bodies)
+driftless context get <slug>                  # if you know the slug (full body)
 driftless context search <keyword>            # ranked; narrow with more terms, "quotes", OR, -negation
 driftless context get --files "src/billing/billing.service.ts,src/billing/refunds/*"   # match by path
 driftless context list --area billing         # browse a domain
 ```
 
-Read the full topic: `what` / `how` / `where` / `gotchas` / `decisions` / `invariants` / `history`. **Returning after time away?** Check `history` and the freshness badge before assuming your old understanding holds.
+Read the full topic: `what` / `how` / `where` / `gotchas` / `decisions` / `invariants` / `history`. **Returning after time away?** Check `history` and the freshness badge before assuming your old understanding holds. Full retrieve flow (when to use which, the brief→full pattern): `references/retrieve.md`.
 
 No topic matches the file you're about to edit? Read the code, then leave a note (don't skip it — the absence of a topic is a gap to close, not permission to assume).
 
@@ -167,6 +197,8 @@ driftless project card status <project-id> <card-id> done
 #      driftless_project_card action:'next' project_id:'<id>'  ← next iteration
 ```
 
+**Live-session coordination (Active Work):** when several agents share a repo+branch, bracket a card's execution: `driftless work start --project <pid> --card <cid> --objective "..."` runs a deterministic preflight (CONFLICT = the card is already being executed elsewhere, pick another; AWARENESS = a live session overlaps your files/topics — coordinate) and a `todo` card moves to `in_progress`. Hooks stream observed files + heartbeats; ALWAYS close with `driftless work finish --outcome ... [--card-status review|done|blocked|in_progress]` or `driftless work abandon` — the card moves only where you explicitly ask, and an unclosed session expires on its own 15 min after the last heartbeat. MCP: the `driftless_work` tool, same actions.
+
 **Dep-gating:** a `todo` card with unmet deps never appears in `next` — it only becomes "ready" once all cards in its `depends_on` list are `done`. When no cards are ready and none are in-flight, `project_done` is true.
 
 **Mid-loop write-back:** a gotcha you hit *while* working a card → `driftless note add --content "..." --project <pid> --card <card-id>`. It attaches to that card, rides its `next` context_bundle, and is synthesized into a draft topic when the project closes — so a learning from card 3 is never lost waiting for the end.
@@ -188,6 +220,8 @@ driftless context get --diff --mark    # …and flag them drifted from local git
 
 If a topic your change touched is stale, refresh it before pushing. `--mark` is opt-in — plain `--diff` only displays.
 
+**Cite what you used.** When committing work that drew on team context, add one commit trailer per topic you relied on — `Context-Used: <slug>@v<N>` (the version comes from the context you read) — so the PR carries its sources.
+
 ## Comments — annotate without editing
 
 A **comment** is a thin annotation that points AT a spine object (a topic/record) or a project card — never a topic itself (no version, drift, or governance; its text stays out of the topic body, rule F). Author is human or agent. It resolves into an edit: `open → resolved → wont_fix`. The killer placement is the **Note→Knowledge gate** — leave precise, field-level feedback at review time instead of a coarse approve/reject.
@@ -200,18 +234,61 @@ driftless context comment resolve <id> [--wont-fix]   ·   reopen <id>
 
 ## Collections — the operational substrate
 
-A **Collection** is a configured table (`record_schema` + `views` + lifecycle + `criterion_rel_slugs`); a **Record** is one typed row. Each use case — CRM, bug tracker, support tickets, content calendar — is a *configured Collection, not new code*. Three archetypes: **pipeline** (records flow by status), **analysis** (record anchored to a drifting source), **content** (a record with a draft→published lifecycle). A record reads the team's Knowledge via `criterion_rel_slugs` before the work happens (the seam). Collections are a **separate primitive from Projects** (the agent loop) — they coexist. Full surface in `references/commands.md` (`driftless collection …`).
+A **Collection** is a configured table (`record_schema` + `views` + lifecycle + `criterion_rel_slugs`); a **Record** is one typed row. Each use case — CRM, bug tracker, support tickets, content calendar — is a *configured Collection, not new code*. Three archetypes: **pipeline** (records flow by status), **analysis** (record anchored to a drifting source), **content** (a record with a draft→published lifecycle). A record reads the team's Knowledge via `criterion_rel_slugs` before the work happens (the seam). Collections are a **separate primitive from Projects** (the agent loop) — they coexist.
+
+**Before working a record, read its criterion.** The `retrieve` action delivers both halves of the seam in ONE call — the relevant records AND the criterion Knowledge to apply first:
+
+```bash
+# MCP: driftless_collection action:'retrieve' id:'<collection-id>'  →  { records, nextCursor, criterion, criterion_missing }
+#   read the criterion, then:  driftless_collection_record action:'update' collection_id:'<id>' record_id:'<id>' fields:{...}
+# action:'context' returns just the criterion (no records).
+```
+
+When operating from a terminal/CLI instead of MCP, use the CLI surface directly:
+
+```bash
+driftless collection list --status active --json
+driftless collection get <collection-id> --json
+driftless collection records <collection-id> [--status <stage>] --json
+driftless collection record update <collection-id> <record-id> --status <stage> --json
+driftless collection record update <collection-id> <record-id> --fields '<json>' --json
+```
+
+If the user mentions a pipeline, hiring, candidates, bugs, CRM, records, or collection data, start with `driftless collection list --status active --json`, find the named Collection, inspect it with `get`, then list/update records. For the recruiting pipeline, look for the active Collection named `Hiring`. Do not ask the user to load the Driftless skill before doing this; use the CLI/MCP surface already available.
+
+Full surface in `references/commands.md` (`driftless collection …`); the records+criterion flow in `references/retrieve.md`.
+
+## Broker & integrations — operate, never script
+
+**Two separate concerns, kept apart on purpose:**
+
+- **Integration SETUP** — *connecting/configuring* a provider. A privileged, **human-led** flow: the dashboard (Settings → Connections) or `driftless integration connect <provider>` → `confirm`. The broker NEVER connects, disconnects, or configures a provider.
+- **Broker EXECUTION** — *operating* a connection that already exists. This is the agent's lane:
+
+```bash
+driftless broker operations <provider>                      # the named operations this connection can do
+driftless broker invoke <provider> <operation> --input '{...}'   # run one (inline + audited)
+driftless broker records <provider> --model <m>             # read a synced model's records (delta-aware)
+```
+
+Credentials resolve server-side (they never reach you); every call is audited. Operations are served from materialized metadata — `--refresh` re-pulls from Nango.
+
+**The no-scripting rule (do NOT cross this line).** A normal agent never authors or deploys an integration script (a Nango action) — that is a third, human-only lane. If the operation you need is **not** in `broker operations <provider>`, **STOP and report the missing capability** to the human; do not write a script to fill the gap. Full lifecycle in `references/broker.md`.
 
 ## Health
 
-`driftless context doctor` audits the vault itself (stale / orphaned / zombie / draft / docs_pending / repo_leak). Run it if retrieval looks wrong or before relying heavily on the layer.
+`driftless context doctor` audits the vault itself (stale / orphaned / zombie / draft / docs_pending / repo_leak / unassigned / duplicates). Run it if retrieval looks wrong or before relying heavily on the layer; consolidate flagged duplicates with `driftless context merge <src> --into <dst>`.
 
 ## See also
 
 - `references/commands.md` — full CLI reference
+- `references/retrieve.md` — retrieve-first: get-files vs retrieve vs search/get, payload views, collection retrieve
+- `references/navigation.md` — moving across planes (Knowledge→Projects→Collections→Broker) without listing everything; the bounded `next_action` path
+- `references/broker.md` — integration SETUP vs broker EXECUTION, the no-agent-scripting rule, operations/invoke/records
 - `references/workflow.md` — the loop, auto-pull/write-after hooks, drift, branches
 - `references/topic-anatomy.md` — fields, append-vs-replace, anchoring, linking, lifecycle
 - `references/cloud.md` — Cloud data model
 - `references/troubleshooting.md` — error / cause / solution catalog
+- `references/architect.md` — Architect mode: grow coverage from YOUR agent (coverage map → admission test → propose)
 
 Common flags: `--dry-run` (preview), `--json` (machine output), `--status proposed` (born Up for review; `reviewed` is never set at create — it's reached only via `context approve`, an owner/admin act).

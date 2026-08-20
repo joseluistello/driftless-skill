@@ -146,11 +146,11 @@ If you see drift unexpectedly, the branch IS in the tracked set. Use `driftless 
 
 ### PR got no comment at all
 
-**Cause (by design):** the only PR comment is the Auditor's, and it posts only when it has a finding. A clean PR — or a workspace without the Auditor configured (no model key) — is silent.
+**Cause (by design):** the only PR comment is the Auditor's, and it posts only when it has a finding. A clean PR — or a workspace with the Auditor toggled off — is silent.
 
 **Solution (if you expected a finding):**
 - `driftless doctor` — GitHub App installed + repo linked.
-- Dashboard → Settings → Agents — the Auditor needs a configured model key (BYOM).
+- Dashboard → Settings → Agents — the Auditor's toggle must be on.
 - To find UNCOVERED areas (the old comment's "gap" section), use the coverage map instead:
   the `driftless_context_coverage` MCP tool or the dashboard — then close gaps with
   `context update <slug> --add-pattern "<glob>"` or a new topic.

@@ -260,6 +260,15 @@ driftless context delete <slug>
 driftless context delete <slug> --dry-run   # preview without deleting
 ```
 
+#### Merge a duplicate into its survivor
+
+```bash
+driftless context merge <source-slug> --into <target-slug> --dry-run   # preview counts
+driftless context merge <source-slug> --into <target-slug>            # fold + archive source
+```
+
+Mechanical only: anchors, `[[mentions]]` and typed relations move to the target; the source is archived. **Prose is never merged** — if the source carried unique decisions/gotchas, rewrite them into the target (rule E). `context doctor` names the duplicate pairs.
+
 #### Move a topic to another workspace
 
 ```bash
@@ -378,7 +387,7 @@ driftless context doctor
 driftless context doctor --json
 ```
 
-Categories: `stale` (code changed, context not updated), `orphaned` (repo deleted — hidden from agents), `draft` (suggested, never confirmed), `docs_pending` (doc anchored, never synced), `repo_leak` (references an unknown repo id). Exits non-zero when `orphaned` or `repo_leak` are present.
+Categories: `stale` (code changed, context not updated), `orphaned` (repo deleted — hidden from agents), `draft` (suggested, never confirmed), `docs_pending` (doc anchored, never synced), `repo_leak` (references an unknown repo id), `unassigned` (no area — file it with `--area`), `duplicates` (same title or identical anchors — consolidate with `context merge`). Exits non-zero when `orphaned` or `repo_leak` are present.
 
 ---
 
@@ -437,6 +446,40 @@ driftless project card rm <project-id> <card-id>
 **Card statuses:** `todo` · `in_progress` · `blocked` · `review` · `done`
 
 **Agent loop:** call `next` → work → validate → persist → mark done → call `next`. Repeat until `project_done: true`. See "Working through a project" in SKILL.md.
+
+---
+
+### `driftless work`
+
+Active Work — ephemeral LIVE sessions over Project cards (the card stays the durable unit; a WorkIntent is one running execution of it). Before editing, `work start` runs a deterministic preflight so two agents on the same repo+branch see each other before stepping on the same files/context.
+
+```bash
+# 1. Start (after `project card next`): preflight + register this session.
+#    Repo + branch auto-detect from git (--repo org/repo --branch to override).
+driftless work start --project <id> --card <id> --objective "..." \
+  [--plan "step"]… [--file path]… [--topic slug]… [--area id]… [--agent name]
+# Preflight verdicts: CLEAR (go) · AWARENESS (go — another live session overlaps;
+# coordinate) · CONFLICT (that card is already being executed; no intent created).
+# A `todo` card moves to in_progress; other statuses are never auto-touched.
+
+# 2. While working (the Claude Code hooks do this automatically):
+driftless work status                 # this repo/branch's session, live from the API
+driftless work active [--project <id>] [--card <id>] [--repo o/r] [--branch b] [--all]
+driftless work update [id] [--observed path]… [--file path]… [--objective "..."]
+driftless work heartbeat [id]         # renew presence only (TTL 15 min)
+
+# 3. ALWAYS close — completed never implies done; the card moves only where asked:
+driftless work finish [id] --outcome success|needs_review|blocked|failed|cancelled \
+  [--summary "..."] [--card-status review|done|blocked|in_progress] \
+  [--validation-passed true|false] [--validation-result "..."]
+driftless work abandon [id] [--reason "..."] [--card-status s]   # card untouched without --card-status
+```
+
+- Ids are optional on update/heartbeat/finish/abandon — the CLI remembers this repo/branch's session locally.
+- An intent whose heartbeat is >15 min old expires lazily: it stops participating in preflight, never touches the card, and stays queryable for audit.
+- Matching is deterministic V1: same card → conflict; same file → awareness high; narrow parent path → medium; same topic → medium; same area → low. Top 3 overlaps only.
+- Authority: the creator mutates/closes; a workspace owner/admin can `abandon` a teammate's stalled session; everyone else reads.
+- MCP twin: the single `driftless_work` tool (actions `start/update/heartbeat/finish/abandon/get/active`).
 
 ---
 

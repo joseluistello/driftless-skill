@@ -69,6 +69,25 @@ If no topic exists, inspect enough code to understand the area, then create a to
 
 Write code following the retrieved context. If the current implementation contradicts stored context, treat that as a context drift signal: verify reality, then update the topic.
 
+### Working a Project card? Register your live session (Active Work)
+
+When the change belongs to a Project card (you got it from `project card next`), bracket the execution with a WorkIntent so concurrent sessions on the same repo+branch see each other before stepping on the same files:
+
+```bash
+# after `project card next`, before editing — deterministic preflight
+driftless work start --project <pid> --card <cid> --objective "..." --file src/billing/webhooks/handler.ts
+#   CLEAR → go · AWARENESS → go, but another live session overlaps (coordinate)
+#   CONFLICT → that card is already being executed; pick another card
+
+# …work (the Claude Code hooks stream observed files + heartbeats for you)…
+
+# ALWAYS close — the card moves only where you explicitly ask:
+driftless work finish --outcome success --card-status review
+#   or: driftless work abandon --reason "context switch"     (card untouched)
+```
+
+`next` stays read-only — it only carries a small `active_work` summary when someone else is live on the card/project; the definitive preflight is `work start`. Sessions expire on their own 15 minutes after the last heartbeat, so a crashed terminal never blocks anyone.
+
 ## Step 4: Update Topics
 
 If you learned something durable, save it. Batch related changes into one update:
