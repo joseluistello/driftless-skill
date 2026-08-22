@@ -37,7 +37,7 @@ driftless doctor
 driftless doctor --json   # machine-readable: { ok, summary, checks[], workspace_diagnostics? }
 ```
 
-Verifies: CLI auth, API connectivity, git workspace, repo connection, AGENTS.md, GitHub App, and topic anchor health. The Workspace line shows the resolved slug and its source (`config` cache, `/me`, or `git-org`). On failure it prints structured diagnostics (tried slugs, `/me` status, failed endpoint).
+Verifies: CLI auth, API connectivity, git workspace, repo connection, AGENTS.md, and topic anchor health. The Workspace line shows the resolved slug and its source (`config` cache, `/me`, or `git-org`). On failure it prints structured diagnostics (tried slugs, `/me` status, failed endpoint).
 
 Run this first when starting in a new environment or debugging a broken setup. `--json` for agents/CI that parse the result.
 
@@ -354,27 +354,11 @@ driftless sync           # Cloud pull for current repo
 driftless sync --json    # machine-readable output
 ```
 
-Reports — the deduped "what moved around my topics" signal, not a raw event feed:
-- **Stale topics** — a topic whose covered code the team changed on a tracked branch since you last looked
-- **Team PR activity** — what teammates shipped against this repo's context (via the GitHub App)
-- **Tracking line** — which branches' pushes count as drift (the default branch is always tracked)
+Reports — the deduped "what needs attention around my topics" signal, not a raw event feed:
+- **Stale topics** — topics explicitly marked drifted from a local checkout
+- **Suggested topics** — pending suggestions awaiting review
 
 No local diff. Pure Cloud state. Use `driftless context get --diff` when you need topics for your current *local* uncommitted changes.
-
----
-
-### `driftless branches`
-
-View or set which branches' pushes count as drift. The repo's **default branch** (from GitHub, auto-detected — main/master/whatever) is always tracked: zero config. Add extra branches only if your real integration branch isn't the GitHub default (e.g. you ship from `release` or `develop`).
-
-```bash
-driftless branches                 # show tracked branches
-driftless branches add release     # also detect drift from pushes to `release`
-driftless branches rm staging
-driftless branches --json
-```
-
-A push to a non-tracked branch is recorded for audit but does **not** mark topics stale — a throwaway feature branch never creates false drift. This is why `sync` only surfaces drift from tracked branches.
 
 ---
 

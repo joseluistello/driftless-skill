@@ -2,7 +2,7 @@
 
 ## What Cloud Stores
 
-Driftless Cloud is the source of truth for the team's durable context. It is not local session memory. It stores topics, anchors, relations, repo links, PR activity, and audit history so humans and agents can retrieve the right context before touching files.
+Driftless Cloud is the source of truth for the team's durable context. It is not local session memory. It stores topics, anchors, relations, repo links, and audit history so humans and agents can retrieve the right context before touching files.
 
 | Entity | Description |
 |---|---|
@@ -12,9 +12,7 @@ Driftless Cloud is the source of truth for the team's durable context. It is not
 | **Topic Anchors** | `patterns`, `where_files`, and `where_repos` that connect topics to files/repos |
 | **Topic Relations** | Typed edges between topics: depends_on, relates_to, supersedes, blocks, implements, documents, risk_for |
 | **Topic Activity** | History of topic changes and file drift signals |
-| **PR Observations** | Pull request metadata, matched topics, covered files, and uncovered file gaps |
-| **Integrations** | GitHub App installation links and delivery settings |
-| **Pending Installations** | GitHub installs awaiting a repo/workspace link |
+| **Integrations** | Governed external-system connections |
 | **API Keys** | Per-workspace authentication keys for CLI/agents |
 
 Cloud stores topic text and metadata. It does not need source-code bodies to deliver context.
@@ -42,16 +40,9 @@ Anchors make topics show up at the moment of work:
 
 The CLI validates patterns against the local checkout before writing. A zero-match pattern is blocked; an over-broad pattern is warned.
 
-### 3. GitHub PR Activity
+### 3. Local checkout context
 
-GitHub pushes and PR activity go to Cloud:
-
-- Stores repo activity metadata for audit (every PR↔topic match is recorded, comment or not).
-- Marks a topic stale when anchored files change on a tracked branch.
-- Queues the Auditor on PRs that touch documented areas; the Auditor posts ONE comment only when it has a finding, carrying the affected topics' recorded context.
-- Gap-finding lives in the coverage map (MCP `driftless_context_coverage` / dashboard), not in PR comments.
-
-The Auditor informs; it never blocks. A clean PR is silent.
+The CLI resolves the current repository identity and matches local file changes against topic anchors. `driftless context get --diff` retrieves the context touched by the current work; `--mark` explicitly persists drift when needed. Source code stays local.
 
 ### 4. Agent Refresh
 
@@ -63,7 +54,7 @@ driftless context get --files "src/path/file.ts"
 driftless context get --diff
 ```
 
-`sync` pulls drift and PR signals. `context get --files` retrieves topic context before editing. `context get --diff` retrieves topics touched by local uncommitted changes before finishing.
+`sync` pulls drift and pending topic suggestions. `context get --files` retrieves topic context before editing. `context get --diff` retrieves topics touched by local uncommitted changes before finishing.
 
 ## Auth Model
 
@@ -72,7 +63,7 @@ driftless context get --diff
 | Dashboard | Clerk session + organization | Browser management |
 | CLI | `X-API-Key` | Agents, scripts, local dev |
 | MCP | OAuth bearer or API key | ChatGPT/Claude/local MCP clients |
-| Webhooks | HMAC-SHA256 | GitHub events |
+| Provider webhooks | Signed provider payload | Connected commercial systems |
 
 ## Multi-Tenancy
 

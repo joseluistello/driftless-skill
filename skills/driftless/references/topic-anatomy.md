@@ -14,7 +14,7 @@ highlights** layered on top:
   markdown). A doc pasted into `--how` is flagged by `context doctor` as
   `mis-shaped how`.
 - `--gotcha` / `--decision` / `--invariant` / `--check` — add one only when you
-  want that specific thing surfaced to the machine (the PR bot, a future agent's
+  want that specific thing surfaced to the machine (a future agent's
   brief) *on top of* the content. Never invent an empty gotcha or decision just
   because the flag exists.
 - `--tags` — OPTIONAL transversal cross-cuts (`security`, `performance`, `decision`), not the topic's subject. Reuse the registry (`driftless tags`); most topics need zero or one. Don't mint one per subject.

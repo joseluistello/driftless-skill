@@ -115,45 +115,7 @@ If the area genuinely has no topic, create one (UC2).
 
 **Cause (most common):** No drift since you last looked — healthy state.
 
-**Cause (subtle):** GitHub App is not installed, so Cloud has no push events to compute drift from. `doctor` shows the GitHub App line as `INFO: Not installed`.
-
-**Solution:**
-- For team drift, install the GitHub App at app.driftless.icu → Settings → Integrations.
-- For *local* uncommitted changes, use `driftless context get --diff` instead — no GitHub App required.
-
-### `sync` shows drift on a feature branch but I never tracked it
-
-**Cause (impossible):** Drift is scoped to **tracked branches only** (the default branch is always tracked). A push to an untracked branch is recorded for audit but does NOT mark topics stale.
-
-**Solution:** Check what's tracked:
-```bash
-driftless branches
-```
-If you see drift unexpectedly, the branch IS in the tracked set. Use `driftless branches rm <branch>` to remove it.
-
----
-
-## PR bot
-
-### No comment appears on new PRs
-
-**Cause:** The GitHub App isn't installed on the repo, or the repo isn't linked to the workspace.
-
-**Solution:**
-- Confirm with `driftless doctor` — the GitHub App line will read `INFO: not installed` if missing.
-- Install the App at app.driftless.icu → Settings → Integrations.
-- Confirm the repo is in the workspace: `driftless context list --auto` (or open the dashboard).
-
-### PR got no comment at all
-
-**Cause (by design):** the only PR comment is the Auditor's, and it posts only when it has a finding. A clean PR — or a workspace with the Auditor toggled off — is silent.
-
-**Solution (if you expected a finding):**
-- `driftless doctor` — GitHub App installed + repo linked.
-- Dashboard → Settings → Agents — the Auditor's toggle must be on.
-- To find UNCOVERED areas (the old comment's "gap" section), use the coverage map instead:
-  the `driftless_context_coverage` MCP tool or the dashboard — then close gaps with
-  `context update <slug> --add-pattern "<glob>"` or a new topic.
+**Solution:** For local uncommitted changes, use `driftless context get --diff`. Add `--mark` only when you intentionally want to persist the matched topics as drifted.
 
 ---
 

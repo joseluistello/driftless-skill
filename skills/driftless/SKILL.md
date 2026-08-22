@@ -28,7 +28,7 @@ It is a **vault**, not a filing ceremony. Most of what you write stays a Note �
 
 ## Default behavior for Driftless work
 
-When the user invokes Driftless, asks about workspace context, or asks you to operate any Driftless plane, do not guess. Use the routing table first. If the request involves a surface you do not clearly know how to operate — Topics/Knowledge, Notes, Projects, Collections/Records, Entities, Broker/integrations, workspaces, areas, tags, hooks, sync, or pre-commit refresh — read this skill completely before acting, then follow referenced files only as needed.
+When the user invokes Driftless, asks about workspace context, or asks you to operate any Driftless plane, do not guess. Use the routing table first. If the request involves a surface you do not clearly know how to operate — Topics/Knowledge, Notes, Projects, Collections/Records, Entities, Broker/integrations, workspaces, areas, tags, sync, or pre-commit refresh — read this skill completely before acting, then follow referenced files only as needed.
 
 Do not ask the user to "load the Driftless skill." In repos with `.driftless/`, `@.driftless/skill.md` is the local operational manual and AGENTS.md points to it. Load it yourself when the task is Driftless-specific or when the command surface is uncertain.
 
@@ -81,8 +81,6 @@ driftless context list --area billing         # browse a domain
 Read the full topic: `what` / `how` / `where` / `gotchas` / `decisions` / `invariants` / `history`. **Returning after time away?** Check `history` and the freshness badge before assuming your old understanding holds. Full retrieve flow (when to use which, the brief→full pattern): `references/retrieve.md`.
 
 No topic matches the file you're about to edit? Read the code, then leave a note (don't skip it — the absence of a topic is a gap to close, not permission to assume).
-
-> Auto-pull (Claude Code): `install-skill` wires a PreToolUse hook that injects the team's **Knowledge** for a file before you edit it — inert until a workspace admin enables it. Details in `references/workflow.md`.
 
 ## Writing — after you learn
 
@@ -197,7 +195,7 @@ driftless project card status <project-id> <card-id> done
 #      driftless_project_card action:'next' project_id:'<id>'  ← next iteration
 ```
 
-**Live-session coordination (Active Work):** when several agents share a repo+branch, bracket a card's execution: `driftless work start --project <pid> --card <cid> --objective "..."` runs a deterministic preflight (CONFLICT = the card is already being executed elsewhere, pick another; AWARENESS = a live session overlaps your files/topics — coordinate) and a `todo` card moves to `in_progress`. Hooks stream observed files + heartbeats; ALWAYS close with `driftless work finish --outcome ... [--card-status review|done|blocked|in_progress]` or `driftless work abandon` — the card moves only where you explicitly ask, and an unclosed session expires on its own 15 min after the last heartbeat. MCP: the `driftless_work` tool, same actions.
+**Live-session coordination (Active Work):** when several agents share a repo+branch, bracket a card's execution: `driftless work start --project <pid> --card <cid> --objective "..."` runs a deterministic preflight (CONFLICT = the card is already being executed elsewhere, pick another; AWARENESS = a live session overlaps your files/topics — coordinate) and a `todo` card moves to `in_progress`. For long sessions, renew presence with `driftless work heartbeat` and report newly touched paths with `driftless work update --observed <path>`. ALWAYS close with `driftless work finish --outcome ... [--card-status review|done|blocked|in_progress]` or `driftless work abandon` — the card moves only where you explicitly ask, and an unclosed session expires on its own 15 min after the last heartbeat. MCP: the `driftless_work` tool, same actions.
 
 **Dep-gating:** a `todo` card with unmet deps never appears in `next` — it only becomes "ready" once all cards in its `depends_on` list are `done`. When no cards are ready and none are in-flight, `project_done` is true.
 
@@ -215,7 +213,7 @@ driftless project card status <project-id> <card-id> blocked
 
 ```bash
 driftless context get --diff           # topics matching your local diff; drifted ones show a badge
-driftless context get --diff --mark    # …and flag them drifted from local git (no GitHub App needed)
+driftless context get --diff --mark    # …and flag them drifted from local git
 ```
 
 If a topic your change touched is stale, refresh it before pushing. `--mark` is opt-in — plain `--diff` only displays.
@@ -285,10 +283,9 @@ Credentials resolve server-side (they never reach you); every call is audited. O
 - `references/retrieve.md` — retrieve-first: get-files vs retrieve vs search/get, payload views, collection retrieve
 - `references/navigation.md` — moving across planes (Knowledge→Projects→Collections→Broker) without listing everything; the bounded `next_action` path
 - `references/broker.md` — integration SETUP vs broker EXECUTION, the no-agent-scripting rule, operations/invoke/records
-- `references/workflow.md` — the loop, auto-pull/write-after hooks, drift, branches
+- `references/workflow.md` — the read/write loop, Active Work, drift, branches
 - `references/topic-anatomy.md` — fields, append-vs-replace, anchoring, linking, lifecycle
 - `references/cloud.md` — Cloud data model
 - `references/troubleshooting.md` — error / cause / solution catalog
-- `references/architect.md` — Architect mode: grow coverage from YOUR agent (coverage map → admission test → propose)
 
 Common flags: `--dry-run` (preview), `--json` (machine output), `--status proposed` (born Up for review; `reviewed` is never set at create — it's reached only via `context approve`, an owner/admin act).

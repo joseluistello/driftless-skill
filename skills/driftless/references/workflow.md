@@ -7,7 +7,7 @@ Every time an AI agent works on a Driftless-enabled repo, it follows this loop:
 ```text
 1. SYNC CLOUD STATE
    driftless sync
-   Read drift, stale topics, PR activity, and tracked branches.
+   Read drift, stale topics, and suggested topics.
 
 2. RETRIEVE TOPIC CONTEXT
    driftless context get <slug>
@@ -35,7 +35,7 @@ Run this first when starting or resuming:
 driftless sync
 ```
 
-Read stale topics, team PR activity, and the tracking line. Drift is scoped to tracked branches: the default branch is always tracked, and teams can add extra branches with `driftless branches`.
+Read persisted stale topics and suggested topics. Local work becomes a drift signal only through the explicit `context get --diff --mark` flow.
 
 If a topic is stale, inspect current code before relying on old assumptions. For your own local uncommitted changes, use `driftless context get --diff`.
 
@@ -79,7 +79,9 @@ driftless work start --project <pid> --card <cid> --objective "..." --file src/b
 #   CLEAR → go · AWARENESS → go, but another live session overlaps (coordinate)
 #   CONFLICT → that card is already being executed; pick another card
 
-# …work (the Claude Code hooks stream observed files + heartbeats for you)…
+# …work; for long sessions renew presence and report newly touched files…
+driftless work heartbeat
+driftless work update --observed src/billing/webhooks/handler.ts
 
 # ALWAYS close — the card moves only where you explicitly ask:
 driftless work finish --outcome success --card-status review
@@ -167,12 +169,6 @@ driftless context relations refund-flow
 driftless context graph refund-flow
 ```
 
-## PR Loop (the Auditor)
+## Local drift loop
 
-The only PR comment Driftless posts is the Auditor's, and only when it has a finding:
-
-- The finding itself — what the change may contradict, as a reviewable proposal.
-- The recorded gotchas / decisions / invariants for the affected topics, riding along.
-- Stale flags on any topic whose note predates the code.
-
-A clean PR is silent — no anchor-match spam. To find UNCOVERED areas, use the coverage map (`driftless_context_coverage` on the MCP, or the dashboard) and grow the topic layer from there.
+Before finishing a change, run `driftless context get --diff` to retrieve the topics anchored to the files you changed. Add `--mark` only when you intentionally want to persist those matched topics as drifted. This local checkout flow does not require a hosted code integration.
