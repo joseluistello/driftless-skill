@@ -307,16 +307,15 @@ driftless context share <slug>            # public read-only link (driftless.icu
 driftless context share <slug> --revoke   # turn the link off
 ```
 
-#### Comment on a topic, a record, or a card
+#### Comment on a topic or record
 
-A comment is a thin annotation that points AT a spine object (a topic/record) or a project card — **not** a topic. It carries no governance of its own and resolves into an edit (`open → resolved → wont_fix`). Author is you (human) or your agent. The killer placement is the Note→Knowledge gate: leave fine-grained, field-level feedback at review time instead of a coarse approve/reject.
+A comment is a thin annotation that points AT a spine object (a topic/record) — **not** a topic. It carries no governance of its own and resolves into an edit (`open → resolved → wont_fix`). Author is you (human) or your agent. The killer placement is the Note→Knowledge gate: leave fine-grained, field-level feedback at review time instead of a coarse approve/reject.
 
 ```bash
 # Comment on a topic (by slug); --field scopes it to one field (e.g. decisions)
 driftless context comment add billing-flow --body "This decision contradicts the refund invariant" --field decisions
 
-# Comment on a project card or a record (by uuid)
-driftless context comment add --card <card-uuid> --body "Blocked on the webhook fix"
+# Comment on a record (by uuid)
 driftless context comment add --record <record-uuid> --body "Duplicate of the Globex lead"
 
 # List a topic's comments at review time (server-side filtered by slug)
@@ -387,91 +386,11 @@ Creates or appends to `AGENTS.md` at the repo root.
 
 ---
 
-### `driftless project`
-
-Projects are boards of cards — shared execution environments for humans and agents.
-
-```bash
-# Projects
-driftless project add "<title>"
-driftless project list [--status active|done|archived]
-driftless project get <id>
-driftless project update <id> [--title "..."] [--status active|done|archived]
-
-# Cards — list
-driftless project cards <project-id> [--status todo,in_progress,...] [--limit n]
-
-# Cards — agent loop tick (one call per iteration)
-driftless project card next <project-id>
-# Returns: next actionable card + context_bundle + project_done flag
-
-# Cards — create
-driftless project card add <project-id> \
-  --title "..." \
-  [--description "..."] \
-  [--acceptance "what done means"] \
-  [--validate "pnpm test billing"] \
-  [--dep <card-id>]              # repeatable — sets depends_on
-  [--owner <clerk-id>]
-
-# Cards — read / update / delete
-driftless project card get <project-id> <card-id>
-driftless project card status <project-id> <card-id> <status>
-driftless project card move <project-id> <card-id> <to-project-id>
-driftless project card rm <project-id> <card-id>
-```
-
-**Card fields:**
-- `acceptance` — what "done" means (free text). Agent checks this before marking done.
-- `validate` — shell command to verify the card. Non-zero exit = stop-and-fix.
-- `depends_on` — list of card UUIDs. A `todo` card is "ready" only when all deps are `done`.
-- `ready` — computed field (true when todo + all deps done). Never set manually.
-
-**Card statuses:** `todo` · `in_progress` · `blocked` · `review` · `done`
-
-**Agent loop:** call `next` → work → validate → persist → mark done → call `next`. Repeat until `project_done: true`. See "Working through a project" in SKILL.md.
-
----
-
-### `driftless work`
-
-Active Work — ephemeral LIVE sessions over Project cards (the card stays the durable unit; a WorkIntent is one running execution of it). Before editing, `work start` runs a deterministic preflight so two agents on the same repo+branch see each other before stepping on the same files/context.
-
-```bash
-# 1. Start (after `project card next`): preflight + register this session.
-#    Repo + branch auto-detect from git (--repo org/repo --branch to override).
-driftless work start --project <id> --card <id> --objective "..." \
-  [--plan "step"]… [--file path]… [--topic slug]… [--area id]… [--agent name]
-# Preflight verdicts: CLEAR (go) · AWARENESS (go — another live session overlaps;
-# coordinate) · CONFLICT (that card is already being executed; no intent created).
-# A `todo` card moves to in_progress; other statuses are never auto-touched.
-
-# 2. While working (the Claude Code hooks do this automatically):
-driftless work status                 # this repo/branch's session, live from the API
-driftless work active [--project <id>] [--card <id>] [--repo o/r] [--branch b] [--all]
-driftless work update [id] [--observed path]… [--file path]… [--objective "..."]
-driftless work heartbeat [id]         # renew presence only (TTL 15 min)
-
-# 3. ALWAYS close — completed never implies done; the card moves only where asked:
-driftless work finish [id] --outcome success|needs_review|blocked|failed|cancelled \
-  [--summary "..."] [--card-status review|done|blocked|in_progress] \
-  [--validation-passed true|false] [--validation-result "..."]
-driftless work abandon [id] [--reason "..."] [--card-status s]   # card untouched without --card-status
-```
-
-- Ids are optional on update/heartbeat/finish/abandon — the CLI remembers this repo/branch's session locally.
-- An intent whose heartbeat is >15 min old expires lazily: it stops participating in preflight, never touches the card, and stays queryable for audit.
-- Matching is deterministic V1: same card → conflict; same file → awareness high; narrow parent path → medium; same topic → medium; same area → low. Top 3 overlaps only.
-- Authority: the creator mutates/closes; a workspace owner/admin can `abandon` a teammate's stalled session; everyone else reads.
-- MCP twin: the single `driftless_work` tool (actions `start/update/heartbeat/finish/abandon/get/active`).
-
----
-
 ### `driftless collection`
 
 The object-native operational substrate. A **Collection** is a configured table (`record_schema` + `views` + lifecycle + `criterion_rel_slugs`); a **Record** is one typed row in it. Each use case — a CRM, a bug tracker, support tickets, a content calendar — is a *configured Collection*, not new code. There are three archetypes: **pipeline** (records flow by status), **analysis** (record anchored to a drifting source), **content** (a record with a draft→published lifecycle).
 
-> Collections are a **separate primitive from `project`** (the agent execution loop). They coexist — a Collection is operational data a human runs augmented by AI; a Project is where an agent works a loop.
+> Collections hold operational data a human runs augmented by AI.
 
 ```bash
 # Create a Collection. record_schema/views accept inline JSON or @file.

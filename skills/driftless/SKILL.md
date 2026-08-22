@@ -28,7 +28,7 @@ It is a **vault**, not a filing ceremony. Most of what you write stays a Note �
 
 ## Default behavior for Driftless work
 
-When the user invokes Driftless, asks about workspace context, or asks you to operate any Driftless plane, do not guess. Use the routing table first. If the request involves a surface you do not clearly know how to operate — Topics/Knowledge, Notes, Projects, Collections/Records, Entities, Broker/integrations, workspaces, areas, tags, sync, or pre-commit refresh — read this skill completely before acting, then follow referenced files only as needed.
+When the user invokes Driftless, asks about workspace context, or asks you to operate any Driftless plane, do not guess. Use the routing table first. If the request involves a surface you do not clearly know how to operate — Topics/Knowledge, Notes, Collections/Records, Entities, Broker/integrations, workspaces, areas, tags, sync, or pre-commit refresh — read this skill completely before acting, then follow referenced files only as needed.
 
 Do not ask the user to "load the Driftless skill." In repos with `.driftless/`, `@.driftless/skill.md` is the local operational manual and AGENTS.md points to it. Load it yourself when the task is Driftless-specific or when the command surface is uncertain.
 
@@ -42,7 +42,6 @@ Pick the FIRST call by what you have in hand. This is the spine — detailed flo
 | You have a **task** but no slug yet | `driftless_context_retrieve { task, files }` (MCP) / `POST /topics/retrieve` — ranked, drifted-first, BRIEF bodies. **Start here when context is unknown.** |
 | You know the **topic slug** | `context get <slug>` (full body) |
 | Searching by **concept** | `context search <kw>` → `context get <slug>` |
-| Working a **project board** | `project card next <pid>` → load `context_bundle` → work → validate → mark done |
 | Acting on a **collection record** | `driftless_collection action:'retrieve' id:<cid>` (records + the criterion to read FIRST) → details: `references/retrieve.md` |
 | Operating a **connected integration** | `broker operations <provider>` → `broker invoke <provider> <op>`. **Operation not listed? STOP + report — never script it.** → details: `references/broker.md` |
 | You **learned something durable** | `context add/update <slug> --area <domain> ...` (the six rules) |
@@ -166,49 +165,6 @@ driftless doctor               # verify auth/connectivity/repo link
 
 Then just work and leave clean notes. Don't seed a generic placeholder topic — it documents nothing and rots. Your first note should be about something REAL you'd tell a new teammate.
 
-## Working through a project — the agent loop
-
-A project is a board of cards. Each card is one unit of work with an optional `acceptance` criterion and `validate` command. The loop has four steps — repeat until `project_done` is true:
-
-```bash
-# 1. Get the next actionable card + its context bundle (one call, no extra round-trip)
-driftless project card next <project-id>
-# MCP: driftless_project_card action:'next' project_id:'<id>'
-# Returns: { card, context_bundle, project_done }
-```
-
-```bash
-# 2. Work the card. Load the context_bundle first — it carries the team's recorded
-#    memory for that card's area so you don't re-derive what the team already knows.
-```
-
-```bash
-# 3. Validate — run the card's `validate` command if present. Non-zero = stop-and-fix.
-#    Check `acceptance` to confirm the outcome matches the definition of done.
-```
-
-```bash
-# 4. Write-back and mark done
-driftless context update <slug> --gotcha "..."   # persist anything durable you learned
-driftless project card status <project-id> <card-id> done
-# MCP: driftless_project_card action:'set' card_id:'<id>' status:'done'
-#      driftless_project_card action:'next' project_id:'<id>'  ← next iteration
-```
-
-**Live-session coordination (Active Work):** when several agents share a repo+branch, bracket a card's execution: `driftless work start --project <pid> --card <cid> --objective "..."` runs a deterministic preflight (CONFLICT = the card is already being executed elsewhere, pick another; AWARENESS = a live session overlaps your files/topics — coordinate) and a `todo` card moves to `in_progress`. For long sessions, renew presence with `driftless work heartbeat` and report newly touched paths with `driftless work update --observed <path>`. ALWAYS close with `driftless work finish --outcome ... [--card-status review|done|blocked|in_progress]` or `driftless work abandon` — the card moves only where you explicitly ask, and an unclosed session expires on its own 15 min after the last heartbeat. MCP: the `driftless_work` tool, same actions.
-
-**Dep-gating:** a `todo` card with unmet deps never appears in `next` — it only becomes "ready" once all cards in its `depends_on` list are `done`. When no cards are ready and none are in-flight, `project_done` is true.
-
-**Mid-loop write-back:** a gotcha you hit *while* working a card → `driftless note add --content "..." --project <pid> --card <card-id>`. It attaches to that card, rides its `next` context_bundle, and is synthesized into a draft topic when the project closes — so a learning from card 3 is never lost waiting for the end.
-
-**Stop-and-fix:** if `validate` exits non-zero, do NOT mark the card done. Fix the failure, then re-validate. The loop halts here until the card is genuinely done.
-
-**Blocked:** if you cannot proceed without a human decision, set the card to `blocked`:
-```bash
-driftless project card status <project-id> <card-id> blocked
-# MCP: driftless_project_card action:'set' card_id:'<id>' status:'blocked'
-```
-
 ## Pre-commit / pre-push
 
 ```bash
@@ -222,17 +178,17 @@ If a topic your change touched is stale, refresh it before pushing. `--mark` is 
 
 ## Comments — annotate without editing
 
-A **comment** is a thin annotation that points AT a spine object (a topic/record) or a project card — never a topic itself (no version, drift, or governance; its text stays out of the topic body, rule F). Author is human or agent. It resolves into an edit: `open → resolved → wont_fix`. The killer placement is the **Note→Knowledge gate** — leave precise, field-level feedback at review time instead of a coarse approve/reject.
+A **comment** is a thin annotation that points AT a spine object (a topic/record) — never a topic itself (no version, drift, or governance; its text stays out of the topic body, rule F). Author is human or agent. It resolves into an edit: `open → resolved → wont_fix`. The killer placement is the **Note→Knowledge gate** — leave precise, field-level feedback at review time instead of a coarse approve/reject.
 
 ```bash
-driftless context comment add <topic-slug> --body "…" [--field decisions]   # or --card/--record <uuid>
+driftless context comment add <topic-slug> --body "…" [--field decisions]   # or --record <uuid>
 driftless context comment list <topic-slug> [--status open]                 # the reviewer's view
 driftless context comment resolve <id> [--wont-fix]   ·   reopen <id>
 ```
 
 ## Collections — the operational substrate
 
-A **Collection** is a configured table (`record_schema` + `views` + lifecycle + `criterion_rel_slugs`); a **Record** is one typed row. Each use case — CRM, bug tracker, support tickets, content calendar — is a *configured Collection, not new code*. Three archetypes: **pipeline** (records flow by status), **analysis** (record anchored to a drifting source), **content** (a record with a draft→published lifecycle). A record reads the team's Knowledge via `criterion_rel_slugs` before the work happens (the seam). Collections are a **separate primitive from Projects** (the agent loop) — they coexist.
+A **Collection** is a configured table (`record_schema` + `views` + lifecycle + `criterion_rel_slugs`); a **Record** is one typed row. Each use case — CRM, bug tracker, support tickets, content calendar — is a *configured Collection, not new code*. Three archetypes: **pipeline** (records flow by status), **analysis** (record anchored to a drifting source), **content** (a record with a draft→published lifecycle). A record reads the team's Knowledge via `criterion_rel_slugs` before the work happens (the seam). Collections are Driftless's operational primitive.
 
 **Before working a record, read its criterion.** The `retrieve` action delivers both halves of the seam in ONE call — the relevant records AND the criterion Knowledge to apply first:
 
@@ -281,9 +237,9 @@ Credentials resolve server-side (they never reach you); every call is audited. O
 
 - `references/commands.md` — full CLI reference
 - `references/retrieve.md` — retrieve-first: get-files vs retrieve vs search/get, payload views, collection retrieve
-- `references/navigation.md` — moving across planes (Knowledge→Projects→Collections→Broker) without listing everything; the bounded `next_action` path
+- `references/navigation.md` — moving across Knowledge, Collections and Broker without listing everything
 - `references/broker.md` — integration SETUP vs broker EXECUTION, the no-agent-scripting rule, operations/invoke/records
-- `references/workflow.md` — the read/write loop, Active Work, drift, branches
+- `references/workflow.md` — the read/write loop, drift, branches
 - `references/topic-anatomy.md` — fields, append-vs-replace, anchoring, linking, lifecycle
 - `references/cloud.md` — Cloud data model
 - `references/troubleshooting.md` — error / cause / solution catalog
