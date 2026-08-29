@@ -421,7 +421,7 @@ driftless collection record update <collection-id> <record-id> [--fields '<json>
 | Variable | Default | Description |
 |---|---|---|
 | `DRIFTLESS_API_KEY` | — | API key for authentication |
-| `DRIFTLESS_API_URL` | `https://api.driftless.icu/api/v1` | Cloud API endpoint |
+| `DRIFTLESS_API_URL` | `https://api.trybrein.com/api/v1` | Cloud API endpoint |
 
 ---
 

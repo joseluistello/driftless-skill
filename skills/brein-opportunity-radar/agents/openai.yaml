@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brein Opportunity Radar"
+  short_description: "Find and verify commercial opportunities"
+  default_prompt: "Find actionable opportunities with Brein."

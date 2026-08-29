@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brein Market Map"
+  short_description: "Compare market segments without exporting contacts"
+  default_prompt: "Map and compare this market with Brein."

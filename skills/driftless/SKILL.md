@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: Driftless
   version: 4.1.0
-  homepage: https://driftless.icu
+  homepage: https://trybrein.com
   cli: "@driftless-sh/cli"
 ---
 

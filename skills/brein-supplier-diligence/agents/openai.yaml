@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brein Supplier Diligence"
+  short_description: "Verify one supplier with evidence and identity controls"
+  default_prompt: "Investigate this supplier with Brein."

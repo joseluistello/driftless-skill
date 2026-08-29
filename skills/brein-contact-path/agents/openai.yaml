@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brein Contact Path"
+  short_description: "Quote and confirm paid contact activation safely"
+  default_prompt: "Quote contact paths for my selected CRM accounts."
